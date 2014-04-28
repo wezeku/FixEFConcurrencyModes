@@ -46,7 +46,7 @@ type CliOptions() =
     
         help.AddOptions o
 
-        "FixEFConcurrencyModes version 1.00 April 2014\n\
+        "FixEFConcurrencyModes version 1.01 April 2014\n\
          Sets ConcurrencyMode to Fixed on columns used for optimistic concurrency control.\n\n\
          Usage: FixEFConcurrencyModes [OPTIONS]" +
         help.ToString() +
@@ -111,11 +111,13 @@ let fixEdmxConcurrencyModes (options : CliOptions) =
             printBadConcurrencyModes badConcurrencyModes
 
         let newBadConcurrencyModes = cmt.BadConcurrencyModes(csdl, ssdl)
-        if newBadConcurrencyModes.Length <> 0 then failwith "Failed to fix the concurrency modes!"
+        if newBadConcurrencyModes.Length <> 0 then 
+            failwith "Failed to fix the concurrency modes!"
 
         if not options.Preview then
             printfn "Writing %s." options.OutputFile
             xdoc.Save options.OutputFile
+
     elif not options.Quiet then
         printfn "No changes needed."
 
@@ -128,8 +130,15 @@ let main argv =
         if options.OutputFile = "" then
             options.OutputFile <- options.InputFile
 
-        fixEdmxConcurrencyModes options
-
-    0 // return an integer exit code
+        try
+            fixEdmxConcurrencyModes options
+            0
+        with
+            | :? System.IO.IOException as e ->
+                printfn "Error: %s" e.Message
+                -1
+            | _ -> reraise()
+    else
+        -1
 
 // ------------------------------------------------------------------------------

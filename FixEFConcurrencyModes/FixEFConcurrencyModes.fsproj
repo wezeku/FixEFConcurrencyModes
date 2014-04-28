@@ -38,6 +38,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>bin\Release\FixEFConcurrencyModes.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
+    <StartArguments>-i nisse</StartArguments>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CommandLine">
