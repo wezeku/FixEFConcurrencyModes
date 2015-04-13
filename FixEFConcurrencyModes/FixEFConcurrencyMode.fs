@@ -63,26 +63,34 @@ type CliOptions() =
 let printBadConcurrencyModes (entProps : EntityProperty seq) =
     printfn "The concurrency mode of these columns will be changed:\n"
 
-    let maxTableWidth = max 10 (entProps |> Seq.map (fun i -> i.Entity.Length) |> Seq.max)
-    let maxColumnWidth = max 10 (entProps |> Seq.map (fun i -> i.Property.Length) |> Seq.max)
-    let padTable (s : string) = s.PadRight(maxTableWidth, ' ')
-    let padColumn (s : string) = s.PadRight(maxColumnWidth, ' ')
+    let maxEntityWidth = max 13 (entProps |> Seq.map (fun i -> i.CsdlEntity.Length) |> Seq.max)
+    let maxPropertyWidth = max 13 (entProps |> Seq.map (fun i -> i.CsdlProperty.Length) |> Seq.max)
+    let maxTableWidth = max 13 (entProps |> Seq.map (fun i -> i.SsdlEntity.Length) |> Seq.max)
+    let maxColumnWidth = max 13 (entProps |> Seq.map (fun i -> i.SsdlProperty.Length) |> Seq.max)
+    let pad maxWidth (s : string) = s.PadRight(maxWidth, ' ')
 
-    printfn "%s  %s" (padTable "Table") (padColumn "Column")
-    printfn "%s  %s" (String('-', maxTableWidth)) (String('-', maxColumnWidth))
+    printfn "%s  %s  %s  %s" 
+            (pad maxEntityWidth "CSDL Entity") (pad maxPropertyWidth "CSDL Property")
+            (pad maxTableWidth "Table") (pad maxColumnWidth "Column")
+    printfn "%s  %s  %s  %s" 
+            (String('-', maxEntityWidth)) (String('-', maxPropertyWidth))
+            (String('-', maxTableWidth)) (String('-', maxColumnWidth))
     for entProp in entProps do
-        printfn "%s  %s" (padTable entProp.Entity) (padColumn entProp.Property)
+        printfn "%s  %s  %s  %s" 
+                (pad maxEntityWidth entProp.CsdlEntity) (pad maxPropertyWidth entProp.CsdlProperty)
+                (pad maxTableWidth entProp.SsdlEntity) (pad maxColumnWidth entProp.SsdlProperty)
     printfn ""
 
 // ------------------------------------------------------------------------------
 
 let fixCsdlConcurrencyModes (csdl : XElement) (entProps : EntityProperty seq) =
+    // entities = all Edmx/Runtime/ConceptualModels/Schema/EntityType entries.
     let entities = csdl.Elements(XName.Get("EntityType", ConcurrencyModeTester.CsdlNs))
 
     let setConcurrencyModeFixed entProp =
-        let entity = entities.First(fun e -> e.Attribute(XName.Get("Name")).Value = entProp.Entity)
+        let entity = entities.First(fun e -> e.Attribute(XName.Get("Name")).Value = entProp.CsdlEntity)
         let property = entity.Elements(XName.Get("Property", ConcurrencyModeTester.CsdlNs))
-                             .FirstOrDefault(fun p -> p.Attribute(XName.Get("Name")).Value = entProp.Property)
+                             .FirstOrDefault(fun p -> p.Attribute(XName.Get("Name")).Value = entProp.CsdlProperty)
         property.SetAttributeValue(XName.Get("ConcurrencyMode"), "Fixed")
 
     for entProp in entProps do
@@ -90,27 +98,34 @@ let fixCsdlConcurrencyModes (csdl : XElement) (entProps : EntityProperty seq) =
 
 // ------------------------------------------------------------------------------
 
-let fixEdmxConcurrencyModes (options : CliOptions) =
-    let xdoc = XDocument.Load options.InputFile
-
+let getCsdlSsdlMsl (xdoc : XDocument) =
     let runtimeElement = xdoc.Root.Element(XName.Get("Runtime", ConcurrencyModeTester.EdmxNs))
     let conceptualModelsElement = runtimeElement.Element(XName.Get("ConceptualModels", ConcurrencyModeTester.EdmxNs))
     let storageModelsElement = runtimeElement.Element(XName.Get("StorageModels", ConcurrencyModeTester.EdmxNs))
+    let mappingsElement = runtimeElement.Element(XName.Get("Mappings", ConcurrencyModeTester.EdmxNs))
+
     let csdl = conceptualModelsElement.Element(XName.Get("Schema", ConcurrencyModeTester.CsdlNs))
     let ssdl = storageModelsElement.Element(XName.Get("Schema", ConcurrencyModeTester.SsdlNs))
+    let msl = mappingsElement.Element(XName.Get("Mapping", ConcurrencyModeTester.MslNs))
+    (csdl, ssdl, msl)
+
+
+let fixEdmxConcurrencyModes (options : CliOptions) =
+    let xdoc = XDocument.Load options.InputFile
+    let (csdl, ssdl, msl) = getCsdlSsdlMsl xdoc
 
     let cmt = ConcurrencyModeTester(
                   ConcurrencyColumnNamePatterns = options.ConcurrencyColumnNamePatterns,
                   RowVersionTypes = options.RowVersionTypes)
 
-    let badConcurrencyModes = cmt.BadConcurrencyModes(csdl, ssdl)
+    let badConcurrencyModes = cmt.BadConcurrencyModes(csdl, ssdl, msl)
 
     if badConcurrencyModes.Length > 0 then
         fixCsdlConcurrencyModes csdl badConcurrencyModes
         if not options.Quiet then 
             printBadConcurrencyModes badConcurrencyModes
 
-        let newBadConcurrencyModes = cmt.BadConcurrencyModes(csdl, ssdl)
+        let newBadConcurrencyModes = cmt.BadConcurrencyModes(csdl, ssdl, msl)
         if newBadConcurrencyModes.Length <> 0 then 
             failwith "Failed to fix the concurrency modes!"
 
