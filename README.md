@@ -1,5 +1,5 @@
-FixEFConcurrencyMode
-====================
+FixEFConcurrencyModes
+=====================
 
 When using Entity Framework, the ConcurrencyMode attribute for properties
 mapped to rowversion (a.k.a. timestamp) database columns, should be set to
@@ -19,7 +19,7 @@ Basic usage is simple. Use the -i option to specify input file, like so
 FixEFConcurrencyModes -i MyEdmxFile.edmx
 ```
 This will change MyEdmxFile.edmx so that all columns of type rowversion or 
-timestamp will have ConcurrencyMode = Fixed. If this default behaviour doesnít 
+timestamp will have ConcurrencyMode = Fixed. If this default behaviour doesn‚Äôt 
 suit you, there are a few options.
 
 ```
@@ -41,13 +41,13 @@ FixEFConcurrencyModes -i MyEdmxFile.edmx -t uniqueidentifier timestamp
 ```
 
 
-This will set ConcurrencyMode = Fixed on all columns with names that include the substring ìVersionNoî or end with ìRevisionî:
+This will set ConcurrencyMode = Fixed on all columns with names that include the substring ‚ÄúVersionNo‚Äù or end with ‚ÄúRevision‚Äù:
 ```
 FixEFConcurrencyModes -i myfile.edmx -n VersionNo Revision$
 ```
 
 
-If you want to preview what FixEFConcurrencyModes will change, but donít want to save the changes, use the -p option:
+If you want to preview what FixEFConcurrencyModes will change, but don‚Äôt want to save the changes, use the -p option:
 ```
 FixEFConcurrencyModes -i myfile.edmx -p
 ```
