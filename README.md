@@ -40,10 +40,12 @@ The following will set ConcurrencyMode = Fixed on all columns of type uniqueiden
 FixEFConcurrencyModes -i MyEdmxFile.edmx -t uniqueidentifier timestamp
 ```
 
+
 This will set ConcurrencyMode = Fixed on all columns with names that include the substring “VersionNo” or end with “Revision”:
 ```
 FixEFConcurrencyModes -i myfile.edmx -n VersionNo Revision$
 ```
+
 
 If you want to preview what FixEFConcurrencyModes will change, but don’t want to save the changes, use the -p option:
 ```
